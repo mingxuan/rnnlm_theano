@@ -53,7 +53,7 @@ if __name__=='__main__':
     cfig = getattr(configurations, 'get_config_penn')()
     sentence = T.lmatrix()
     sentence_mask = T.matrix()
-    lm = language_model(cfig['vocab_size'], cfig['nemb'], cfig['nhids'])
+    lm = language_model(cfig['vocabsize'], cfig['nemb'], cfig['nhids'])
     lm.apply(sentence, sentence_mask)
 
     cost_sum = lm.cost
