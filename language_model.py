@@ -45,7 +45,7 @@ def test(test_fn , tst_stream):
         cost = test_fn(sentence, sentence_mask)
         sums += cost[0]
         case += sentence_mask.sum()
-    ppl = numpy.exp(-sums/case)
+    ppl = numpy.exp(sums/case)
     logger.info('ppl : {}'.format(ppl))
 
 if __name__=='__main__':
