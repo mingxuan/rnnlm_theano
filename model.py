@@ -42,6 +42,7 @@ class LogisticRegression(object):
             mask_flat = mask.flatten()
             ce = categorical_crossentropy(prediction_flat, targets_flat) * mask_flat
         else:
+            assert mask is None
             ce = categorical_crossentropy(prediction, targets)
         return T.sum(ce)
 

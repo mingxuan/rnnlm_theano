@@ -32,19 +32,23 @@ class language_model(object):
         self.layers.append(rnn)
 
         logistic_layer = LogisticRegression(hiddens, self.n_hids, self.vocab_size)
+        self.layers.append(logistic_layer)
 
         self.cost = logistic_layer.cost(tgt, tgt_mask)
 
         for layer in self.layers:
             self.params.extend(layer.params)
 
+        self.L2 = sum(T.sum(item ** 2) for item in self.params)
+        self.L1 = sum(T.sum(abs(item)) for item in self.params)
+
 def test(test_fn , tst_stream):
     sums = 0
     case = 0
     for sentence, sentence_mask in tst_stream.get_epoch_iterator():
-        cost = test_fn(sentence, sentence_mask)
+        cost = test_fn(sentence.T, sentence_mask.T)
         sums += cost[0]
-        case += sentence_mask.sum()
+        case += sentence_mask[1:].sum()
     ppl = numpy.exp(sums/case)
     logger.info('ppl : {}'.format(ppl))
 
@@ -60,7 +64,9 @@ if __name__=='__main__':
     cost_mean = lm.cost/sentence.shape[1]
 
     params = lm.params
-    grads = T.grad(cost_mean, params)
+    regular = lm.L1 * 1e-6 + lm.L2 * 1e-6
+
+    grads = T.grad(cost_mean + regular, params)
     updates = adadelta(params, grads)
     ds = DStream(datatype='train', config=cfig)
     ts = DStream(datatype='test', config=cfig)
