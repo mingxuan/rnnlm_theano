@@ -4,6 +4,8 @@ from model import GRU, lookup_table, LogisticRegression
 from utils import adadelta
 from stream import DStream
 import numpy
+import logging
+logger = logging.getLogger(__name__)
 
 class language_model(object):
 
@@ -17,10 +19,10 @@ class language_model(object):
 
     def apply(self, sentence, sentence_mask):
 
-        src = sentence[1:]
-        src_mask = sentence_mask[1:]
-        tgt = sentence[:-1]
-        tgt_mask = sentence_mask[:-1]
+        src = sentence[:-1]
+        src_mask = sentence_mask[:-1]
+        tgt = sentence[1:]
+        tgt_mask = sentence_mask[1:]
         table = lookup_table(self.n_in, self.vocab_size)
         state_below = table.apply(src)
         self.layers.append(table)
@@ -44,14 +46,14 @@ def test(test_fn , tst_stream):
         sums += cost[0]
         case += sentence_mask.sum()
     ppl = numpy.exp(-sums/case)
-    print 'ppl : {}'.format(ppl)
+    logger.info('ppl : {}'.format(ppl))
 
 if __name__=='__main__':
     import configurations
-    configuration = getattr(configurations, 'get_config_penn')()
+    cfig = getattr(configurations, 'get_config_penn')()
     sentence = T.lmatrix()
     sentence_mask = T.matrix()
-    lm = language_model(10001, 500, 500)
+    lm = language_model(cfig['vocab_size'], cfig['nemb'], cfig['nhids'])
     lm.apply(sentence, sentence_mask)
 
     cost_sum = lm.cost
@@ -60,12 +62,13 @@ if __name__=='__main__':
     params = lm.params
     grads = T.grad(cost_mean, params)
     updates = adadelta(params, grads)
-    ds = DStream(datatype='train', config=configuration)
-    ts = DStream(datatype='test', config=configuration)
+    ds = DStream(datatype='train', config=cfig)
+    ts = DStream(datatype='test', config=cfig)
 
     fn = theano.function([sentence, sentence_mask], [cost_mean], updates=updates)
     test_fn = theano.function([sentence, sentence_mask], [cost_sum])
-    for _ in range(20):
+    for epoch in range(20):
+        logger.info('{} epoch has been tackled;'.format(epoch))
         for data, mask in ds.get_epoch_iterator():
             c = fn(data.T, mask.T)
         test(test_fn, ts)
